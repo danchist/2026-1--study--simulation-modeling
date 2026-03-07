@@ -271,4 +271,3 @@ date-format: "YYYY-MM-DD" # Example: 2025-09-06
 # Список литературы
 
 - [Лабораторная работа №1](https://esystem.rudn.ru/mod/resource/view.php?id=1356134)
-
