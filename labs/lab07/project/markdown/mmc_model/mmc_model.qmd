@@ -1,0 +1,64 @@
+```julia
+using StableRNGs
+using Distributions
+using ConcurrentSim
+using ResumableFunctions
+
+
+@resumable function customer(
+    env::Environment,
+    server::Resource,
+    id::Integer,
+    t_a::Float64,
+    d_s::Distribution,
+	rng,
+	log,
+)
+    @yield timeout(env, t_a) # customer arrives
+    println("Customer $id arrived: ", now(env))
+	push!(log, (id=id, event="arrived", time=now(env)))
+
+    @yield request(server) # customer starts service
+    println("Customer $id entered service: ", now(env))
+	push!(log, (id=id, event="enteredService", time=now(env)))
+
+    @yield timeout(env, rand(rng, d_s)) # server is busy
+
+
+    @yield unlock(server) # customer exits service
+    println("Customer $id exited service: ", now(env))
+	push!(log, (id=id, event="exitedService", time=now(env)))
+end
+```
+
+setup and run simulation
+
+```julia
+function setup_and_run(;
+	seed=123,
+	num_customers=10,
+	num_servers=2,
+	mu=1.0 / 2,
+	lam=0.9,
+)
+	rng = StableRNG(seed)
+
+	arrival_dist = Exponential(1 / lam) # interarrival time distribution
+	service_dist = Exponential(1 / mu) # service time distribution
+
+    sim = Simulation() # initialize simulation environment
+    server = Resource(sim, num_servers) # initialize servers
+
+	log = NamedTuple[]
+
+    arrival_time = 0.0
+
+    for i = 1:num_customers # initialize customers
+        arrival_time += rand(rng, arrival_dist)
+        @process customer(sim, server, i, arrival_time, service_dist, rng, log,)
+    end
+    run(sim) # run simulation
+	return log
+end
+```
+
